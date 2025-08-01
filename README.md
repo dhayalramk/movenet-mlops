@@ -20,7 +20,7 @@ First-time setup (run once):
 ```bash
 chmod +x scripts/setup_py310.sh
 ./scripts/setup_py310.sh
-
+```
 
 ## Quick Start (Local / Codespaces)
 Frontend:
