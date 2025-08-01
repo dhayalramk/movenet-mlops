@@ -1,0 +1,30 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: ECR repository for MoveNet backend
+
+Parameters:
+  ECRRepoName:
+    Type: String
+    Default: movenet-backend
+
+Resources:
+  Repo:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: !Ref ECRRepoName
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      LifecyclePolicy:
+        LifecyclePolicyText: |
+          {
+            "rules": [
+              { "rulePriority": 1, "description": "Keep last 10 images",
+                "selection": { "tagStatus": "any", "countType": "imageCountMoreThan", "countNumber": 10 },
+                "action": { "type": "expire" } }
+            ]
+          }
+
+Outputs:
+  RepoName:
+    Value: !Ref Repo
+  RepoUri:
+    Value: !GetAtt Repo.RepositoryUri

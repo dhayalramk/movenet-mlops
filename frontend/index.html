@@ -2,15 +2,39 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>MoveNet In-Browser</title>
+  <title>MoveNet In-Browser (Variants + Uploads)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection/dist/movenet.js"></script>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <h2>MoveNet Pose Detection</h2>
-  <video id="webcam" autoplay playsinline width="640" height="480"></video>
-  <canvas id="canvas" width="640" height="480"></canvas>
+  <h2>MoveNet – In Browser</h2>
+  <div class="controls">
+    <label>Variant:
+      <select id="variant">
+        <option value="SINGLEPOSE_LIGHTNING">SinglePose Lightning</option>
+        <option value="SINGLEPOSE_THUNDER">SinglePose Thunder</option>
+        <option value="MULTIPOSE_LIGHTNING">MultiPose Lightning</option>
+      </select>
+    </label>
+    <label>Backend URL (optional):
+      <input id="backendUrl" placeholder="https://your-apprunner-url" />
+    </label>
+    <button id="useWebcam">Use Webcam</button>
+    <input type="file" id="imageInput" accept="image/*" />
+    <input type="file" id="videoInput" accept="video/*" />
+    <button id="exportJson">Export JSON</button>
+  </div>
+
+  <div class="wrap">
+    <video id="video" playsinline></video>
+    <canvas id="canvas"></canvas>
+  </div>
+  <pre id="stats"></pre>
+  <div id="toast" class="toast" hidden></div>
+
   <script src="script.js"></script>
 </body>
 </html>

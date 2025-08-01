@@ -1,4 +1,8 @@
 fastapi
-uvicorn
-tensorflow
+uvicorn[standard]
+tensorflow==2.14.0
+tensorflow-hub
 Pillow
+boto3
+psutil
+python-multipart
