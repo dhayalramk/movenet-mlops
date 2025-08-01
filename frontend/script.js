@@ -30,6 +30,25 @@ let running = false;
 let fpsSamples = [];
 let allDetections = [];
 let autoTimer = null;
+let webcamStream = null;
+
+function stopWebcam() {
+  try {
+    if (webcamStream) {
+      webcamStream.getTracks().forEach(t => t.stop());
+      webcamStream = null;
+    }
+  } catch (_) {}
+  running = false;
+  video.srcObject = null;
+  // Clear canvas & stats
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  statsEl.textContent = '';
+  // Button label
+  useWebcamBtn.textContent = 'Use Webcam';
+  // Stop auto-store if enabled
+  if (autoTimer) { clearInterval(autoTimer); autoTimer = null; autoStoreChk.checked = false; }
+}
 
 /* ---------- Errors / Toasts ---------- */
 function showError(e) {
@@ -188,13 +207,18 @@ async function loop() {
 /* ---------- Inputs ---------- */
 async function startWebcam() {
   try {
+    // Stop any playing file video first
+    if (!video.srcObject && !video.paused && !video.ended) { video.pause(); }
+
     const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    webcamStream = stream;                         // <— save it
     video.srcObject = stream;
     await video.play();
-    await new Promise((res) => { if (video.readyState >= 2) res(); else video.onloadedmetadata = () => res(); });
+    await new Promise(res => { if (video.readyState >= 2) res(); else video.onloadedmetadata = () => res(); });
     resizeCanvas(video.videoWidth, video.videoHeight);
     await restartDetector();
     running = true;
+    useWebcamBtn.textContent = 'Stop Webcam';      // <— label
     loop();
   } catch (e) {
     showToast('Webcam failed or blocked. Try image/video upload.');
@@ -203,6 +227,7 @@ async function startWebcam() {
 }
 
 async function handleImage(file) {
+  if (webcamStream) stopWebcam(); 
   const img = new Image();
   img.onload = async () => {
     resizeCanvas(img.width, img.height);
@@ -221,6 +246,7 @@ async function handleImage(file) {
 }
 
 async function handleVideo(file) {
+  if (webcamStream) stopWebcam(); 
   const url = URL.createObjectURL(file);
   video.src = url;
   await video.play();
@@ -258,7 +284,10 @@ function sendCurrentFrame() {
 }
 
 /* ---------- Wire up ---------- */
-useWebcamBtn.onclick = startWebcam;
+useWebcamBtn.onclick = () => {
+  if (webcamStream) stopWebcam();
+  else startWebcam();
+};
 imageInput.onchange  = (e) => e.target.files?.[0] && handleImage(e.target.files[0]);
 videoInput.onchange  = (e) => e.target.files?.[0] && handleVideo(e.target.files[0]);
 
