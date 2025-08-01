@@ -32,6 +32,8 @@ let allDetections = [];
 let autoTimer = null;
 let webcamStream = null;
 
+let lastFrameTs = 0; 
+
 function setWebcamBtn(mode) {
   // mode: 'start' or 'stop'
   if (mode === 'stop') {
@@ -140,6 +142,7 @@ function drawPoses(poses) {
   ctx.fillStyle = '#fff';
   ctx.fillText(text, 8 + pad, 8 + 15);
   ctx.restore();
+  lastFrameTs = Date.now();
 }
 
 function updateStats(start) {
@@ -245,6 +248,7 @@ async function handleImage(file) {
   img.onload = async () => {
     resizeCanvas(img.width, img.height);
     ctx.drawImage(img, 0, 0);
+    lastFrameTs = Date.now();
     await restartDetector();
     const t0 = performance.now();
     const poses = await detector.estimatePoses(img);
@@ -315,10 +319,19 @@ exportJsonBtn.onclick = () => {
 storeBtn.onclick = sendCurrentFrame;
 autoStoreChk.onchange = (e) => {
   if (e.target.checked) {
-    autoTimer = setInterval(() => { if (running) sendCurrentFrame(); }, 5000);
+    autoTimer = setInterval(() => {
+      // Need a backend URL
+      if (!(backendUrlInput.value || '').trim()) return;
+      // Only send if we have drawn at least one real frame
+      if (canvas.width === 0 || canvas.height === 0) return;
+      if (lastFrameTs === 0) return;           // nothing rendered yet
+      sendCurrentFrame();                      // will snapshot the canvas
+    }, 5000);
     showToast('Auto-store ON');
   } else {
-    clearInterval(autoTimer); autoTimer = null; showToast('Auto-store OFF');
+    clearInterval(autoTimer);
+    autoTimer = null;
+    showToast('Auto-store OFF');
   }
 };
 
