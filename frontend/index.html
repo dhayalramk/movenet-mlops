@@ -4,17 +4,23 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>MoveNet - In Browser</title>
-  <link rel="icon" href="data:," /> <!-- avoid favicon 404 -->
-  <!-- Styles -->
+
+  <!-- Prevent favicon 404 in dev -->
+  <link rel="icon" href="data:," />
+
+  <!-- Styles (your local stylesheet) -->
   <link rel="stylesheet" href="styles.css" />
-  <!-- TF.js & models (must load before script.js) -->
+
+  <!-- TF.js + MoveNet (must load before script.js) -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection/dist/movenet.js"></script>
 </head>
 <body>
   <div class="container">
-    <div class="header"><h2>MoveNet - In Browser</h2></div>
+    <div class="header">
+      <h2>MoveNet - In Browser</h2>
+    </div>
 
     <!-- Toolbar -->
     <div class="toolbar">
@@ -27,34 +33,44 @@
         </select>
       </div>
 
-      <div class="group" style="flex:1">
+      <div class="group grow">
         <label>Backend URL:</label>
-        <input id="backendUrl" class="input" placeholder="https://your-apprunner-or-codespace-url" style="width:100%">
+        <input id="backendUrl" class="input stretch"
+              placeholder="https://your-apprunner-or-codespace-url" />
       </div>
 
+
       <div class="group">
+        <!-- Start/Stop webcam toggle -->
         <button id="useWebcam" class="btn btn-start">Start Webcam</button>
-        <label class="btn ghost">Choose File
-          <input type="file" id="imageInput" accept="image/*" style="display:none">
+
+        <!-- Image file -->
+        <label class="btn ghost">
+          Choose File
+          <input type="file" id="imageInput" accept="image/*" style="display:none" />
         </label>
-        <label class="btn ghost">Choose File
-          <input type="file" id="videoInput" accept="video/*" style="display:none">
+
+        <!-- Video file -->
+        <label class="btn ghost">
+          Choose File
+          <input type="file" id="videoInput" accept="video/*" style="display:none" />
         </label>
+
         <button id="exportJson" class="btn ghost">Export JSON</button>
       </div>
 
       <div class="group">
         <button id="storeFrame" class="btn">Send Current Frame To Backend</button>
         <label class="checkbox">
-          <input type="checkbox" id="autoStore"> Auto-store every 5s
+          <input type="checkbox" id="autoStore" /> Auto-store every 5s
         </label>
         <span id="storeStatus" class="muted"></span>
       </div>
     </div>
 
-    <!-- 3 panes -->
+    <!-- Three panes -->
     <div class="panes">
-      <!-- Left -->
+      <!-- Left: Input & Render -->
       <section class="panel">
         <h3>Input & Render</h3>
         <div class="badges">
@@ -62,30 +78,32 @@
           <span id="backendBadge" class="badge muted">Backend: not set</span>
         </div>
         <div class="wrap">
+          <!-- hidden video; we draw into the canvas -->
           <video id="video" playsinline></video>
           <canvas id="canvas"></canvas>
         </div>
         <pre id="stats"></pre>
       </section>
 
-      <!-- Center -->
+      <!-- Center: Raw JSON -->
       <section class="panel">
         <h3>Raw JSON (latest)</h3>
         <pre id="rawJson" class="codebox">{}</pre>
       </section>
 
-      <!-- Right -->
+      <!-- Right: Derived View -->
       <section class="panel">
         <h3>Derived View</h3>
         <div id="derived"><p class="muted">Waiting for detections…</p></div>
       </section>
     </div>
 
+    <!-- Error + toast -->
     <pre id="err" class="codebox hidden"></pre>
     <div id="toast" class="toast hidden"></div>
   </div>
 
-  <!-- Your app code (must be after the DOM & TF scripts) -->
+  <!-- App logic (your local JS) -->
   <script src="script.js"></script>
 </body>
 </html>
