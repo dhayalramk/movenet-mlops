@@ -6,3 +6,4 @@ Pillow
 boto3
 psutil
 python-multipart
+numpy==1.24.4

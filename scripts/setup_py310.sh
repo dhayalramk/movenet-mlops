@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ---- Config (edit if you want other versions/names) ----
+# ---- Config ----
 PY_VER="3.10.13"
 VENV_NAME="movenet-310"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)"
 
 echo "==> Repo root: $REPO_ROOT"
 
-# ---- Apt prerequisites (Debian/Ubuntu image in Codespaces) ----
+# ---- Apt prerequisites ----
 if ! command -v apt-get >/dev/null 2>&1; then
   echo "This script expects apt-get (Debian/Ubuntu). Aborting."
   exit 1
@@ -29,13 +29,13 @@ else
   echo "==> pyenv already present at ~/.pyenv"
 fi
 
-# Ensure current shell knows about pyenv (without restarting)
+# ---- Configure pyenv for this shell ----
 export PYENV_ROOT="$HOME/.pyenv"
 export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init -)"
 eval "$(pyenv virtualenv-init -)"
 
-# Also persist to future shells (append only once)
+# ---- Persist pyenv in future shells ----
 if ! grep -q 'pyenv init' "$HOME/.bashrc"; then
   {
     echo 'export PYENV_ROOT="$HOME/.pyenv"'
@@ -45,7 +45,7 @@ if ! grep -q 'pyenv init' "$HOME/.bashrc"; then
   } >> "$HOME/.bashrc"
 fi
 
-# ---- Install Python & virtualenv (idempotent) ----
+# ---- Install Python & virtualenv ----
 echo "==> Ensuring Python $PY_VER is installed via pyenv..."
 pyenv install -s "$PY_VER"
 
@@ -54,21 +54,23 @@ if ! pyenv virtualenvs --bare | grep -qx "$VENV_NAME"; then
   pyenv virtualenv "$PY_VER" "$VENV_NAME"
 fi
 
-# Set this repo to use the venv locally
 cd "$REPO_ROOT"
 pyenv local "$VENV_NAME"
 
-# ---- Verify and install backend requirements ----
+# ---- Upgrade pip and install backend requirements ----
 echo "==> Python version in this repo:"
 python --version
 
-echo "==> Upgrading pip and installing backend requirements..."
 cd "$REPO_ROOT/backend"
 python -m pip install --upgrade pip
 pip install -r requirements.txt
+
+# ---- Downgrade NumPy for TensorFlow compatibility ----
+echo "==> Downgrading numpy to 1.24.4 for TensorFlow compatibility..."
+pip uninstall -y numpy
+pip install numpy==1.24.4
 
 echo "==> Done."
 echo "You can start the API with:"
 echo "    cd $REPO_ROOT/backend"
 echo "    uvicorn app:app --host 0.0.0.0 --port 8000"
-
