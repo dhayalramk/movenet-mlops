@@ -1,16 +1,6 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>MoveNet In-Browser (Variants + Uploads)</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection/dist/movenet.js"></script>
-  <link rel="stylesheet" href="styles.css" />
-</head>
 <body>
-  <h2>MoveNet – In Browser</h2>
+  <h2>MoveNet - In Browser</h2>
+
   <div class="controls">
     <label>Variant:
       <select id="variant">
@@ -20,21 +10,54 @@
       </select>
     </label>
     <label>Backend URL (optional):
-      <input id="backendUrl" placeholder="https://your-apprunner-url" />
+      <input id="backendUrl" placeholder="https://your-apprunner-or-codespace-url" />
     </label>
     <button id="useWebcam">Use Webcam</button>
     <input type="file" id="imageInput" accept="image/*" />
     <input type="file" id="videoInput" accept="video/*" />
     <button id="exportJson">Export JSON</button>
+
+    <button id="storeFrame">Send Current Frame To Backend</button>
+    <label style="margin-left:8px"><input type="checkbox" id="autoStore"> Auto-store every 5s</label>
+    <span id="storeStatus" class="muted"></span>
   </div>
 
-  <div class="wrap">
-    <video id="video" playsinline></video>
-    <canvas id="canvas"></canvas>
+  <!-- *** UNIQUE ID so styles cannot be overridden *** -->
+  <div id="pane3">
+    <!-- LEFT -->
+    <section class="col">
+      <h3>Input & Render</h3>
+      <div class="badges">
+        <span id="variantBadge" class="badge">Variant: -</span>
+        <span id="backendBadge" class="badge muted">Backend: not set</span>
+      </div>
+      <div class="wrap">
+        <!-- keep video for capture, but hide it explicitly -->
+        <video id="video" playsinline style="display:none"></video>
+        <canvas id="canvas"></canvas>
+      </div>
+      <pre id="stats"></pre>
+    </section>
+
+    <!-- CENTER -->
+    <section class="col">
+      <h3>Raw JSON (latest)</h3>
+      <pre id="rawJson" class="codebox">{}</pre>
+    </section>
+
+    <!-- RIGHT -->
+    <section class="col">
+      <h3>Derived View</h3>
+      <div id="derived"><p>Waiting for detections...</p></div>
+    </section>
   </div>
-  <pre id="stats"></pre>
+
+  <pre id="err" class="codebox hidden"></pre>
   <div id="toast" class="toast" hidden></div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection/dist/movenet.js"></script>
+  <link rel="stylesheet" href="styles.css" />
   <script src="script.js"></script>
 </body>
-</html>
