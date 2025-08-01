@@ -1,63 +1,91 @@
-<body>
-  <h2>MoveNet - In Browser</h2>
-
-  <div class="controls">
-    <label>Variant:
-      <select id="variant">
-        <option value="SINGLEPOSE_LIGHTNING">SinglePose Lightning</option>
-        <option value="SINGLEPOSE_THUNDER">SinglePose Thunder</option>
-        <option value="MULTIPOSE_LIGHTNING">MultiPose Lightning</option>
-      </select>
-    </label>
-    <label>Backend URL (optional):
-      <input id="backendUrl" placeholder="https://your-apprunner-or-codespace-url" />
-    </label>
-    <button id="useWebcam">Use Webcam</button>
-    <input type="file" id="imageInput" accept="image/*" />
-    <input type="file" id="videoInput" accept="video/*" />
-    <button id="exportJson">Export JSON</button>
-
-    <button id="storeFrame">Send Current Frame To Backend</button>
-    <label style="margin-left:8px"><input type="checkbox" id="autoStore"> Auto-store every 5s</label>
-    <span id="storeStatus" class="muted"></span>
-  </div>
-
-  <!-- *** UNIQUE ID so styles cannot be overridden *** -->
-  <div id="pane3">
-    <!-- LEFT -->
-    <section class="col">
-      <h3>Input & Render</h3>
-      <div class="badges">
-        <span id="variantBadge" class="badge">Variant: -</span>
-        <span id="backendBadge" class="badge muted">Backend: not set</span>
-      </div>
-      <div class="wrap">
-        <!-- keep video for capture, but hide it explicitly -->
-        <video id="video" playsinline style="display:none"></video>
-        <canvas id="canvas"></canvas>
-      </div>
-      <pre id="stats"></pre>
-    </section>
-
-    <!-- CENTER -->
-    <section class="col">
-      <h3>Raw JSON (latest)</h3>
-      <pre id="rawJson" class="codebox">{}</pre>
-    </section>
-
-    <!-- RIGHT -->
-    <section class="col">
-      <h3>Derived View</h3>
-      <div id="derived"><p>Waiting for detections...</p></div>
-    </section>
-  </div>
-
-  <pre id="err" class="codebox hidden"></pre>
-  <div id="toast" class="toast" hidden></div>
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MoveNet - In Browser</title>
+  <link rel="icon" href="data:," /> <!-- avoid favicon 404 -->
+  <!-- Styles -->
+  <link rel="stylesheet" href="styles.css" />
+  <!-- TF.js & models (must load before script.js) -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection/dist/movenet.js"></script>
-  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="container">
+    <div class="header"><h2>MoveNet - In Browser</h2></div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="group">
+        <label>Variant:</label>
+        <select id="variant" class="select">
+          <option value="SINGLEPOSE_LIGHTNING">SinglePose Lightning</option>
+          <option value="SINGLEPOSE_THUNDER">SinglePose Thunder</option>
+          <option value="MULTIPOSE_LIGHTNING">MultiPose Lightning</option>
+        </select>
+      </div>
+
+      <div class="group" style="flex:1">
+        <label>Backend URL:</label>
+        <input id="backendUrl" class="input" placeholder="https://your-apprunner-or-codespace-url" style="width:100%">
+      </div>
+
+      <div class="group">
+        <button id="useWebcam" class="btn">Use Webcam</button>
+        <label class="btn ghost">Choose File
+          <input type="file" id="imageInput" accept="image/*" style="display:none">
+        </label>
+        <label class="btn ghost">Choose File
+          <input type="file" id="videoInput" accept="video/*" style="display:none">
+        </label>
+        <button id="exportJson" class="btn ghost">Export JSON</button>
+      </div>
+
+      <div class="group">
+        <button id="storeFrame" class="btn">Send Current Frame To Backend</button>
+        <label class="checkbox">
+          <input type="checkbox" id="autoStore"> Auto-store every 5s
+        </label>
+        <span id="storeStatus" class="muted"></span>
+      </div>
+    </div>
+
+    <!-- 3 panes -->
+    <div class="panes">
+      <!-- Left -->
+      <section class="panel">
+        <h3>Input & Render</h3>
+        <div class="badges">
+          <span id="variantBadge" class="badge">Variant: –</span>
+          <span id="backendBadge" class="badge muted">Backend: not set</span>
+        </div>
+        <div class="wrap">
+          <video id="video" playsinline></video>
+          <canvas id="canvas"></canvas>
+        </div>
+        <pre id="stats"></pre>
+      </section>
+
+      <!-- Center -->
+      <section class="panel">
+        <h3>Raw JSON (latest)</h3>
+        <pre id="rawJson" class="codebox">{}</pre>
+      </section>
+
+      <!-- Right -->
+      <section class="panel">
+        <h3>Derived View</h3>
+        <div id="derived"><p class="muted">Waiting for detections…</p></div>
+      </section>
+    </div>
+
+    <pre id="err" class="codebox hidden"></pre>
+    <div id="toast" class="toast hidden"></div>
+  </div>
+
+  <!-- Your app code (must be after the DOM & TF scripts) -->
   <script src="script.js"></script>
 </body>
+</html>
