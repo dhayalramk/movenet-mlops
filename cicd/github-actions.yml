@@ -1,0 +1,20 @@
+name: MLOps CI/CD
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v2
+
+    - name: Build Docker Image
+      run: docker build -t movenet-backend ./backend
+
+    - name: Lint Python
+      run: |
+        pip install flake8
+        flake8 backend/
