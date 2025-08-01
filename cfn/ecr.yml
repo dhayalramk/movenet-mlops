@@ -1,30 +1,27 @@
-AWSTemplateFormatVersion: "2010-09-09"
-Description: ECR repository for MoveNet backend
+AWSTemplateFormatVersion: '2010-09-09'
+Description: MoveNet - ECR repo per stage
 
 Parameters:
-  ECRRepoName:
-    Type: String
-    Default: movenet-backend
+  Project: { Type: String }
+  Stage:   { Type: String }
 
 Resources:
   Repo:
     Type: AWS::ECR::Repository
     Properties:
-      RepositoryName: !Ref ECRRepoName
-      ImageScanningConfiguration:
-        ScanOnPush: true
+      RepositoryName: !Sub '${Project}-${Stage}'
+      ImageScanningConfiguration: { ScanOnPush: true }
+      ImageTagMutability: MUTABLE
       LifecyclePolicy:
         LifecyclePolicyText: |
           {
             "rules": [
-              { "rulePriority": 1, "description": "Keep last 10 images",
-                "selection": { "tagStatus": "any", "countType": "imageCountMoreThan", "countNumber": 10 },
+              { "rulePriority": 1, "description": "keep last 20",
+                "selection": { "tagStatus": "any", "countType": "imageCountMoreThan", "countNumber": 20 },
                 "action": { "type": "expire" } }
             ]
           }
 
 Outputs:
-  RepoName:
-    Value: !Ref Repo
-  RepoUri:
-    Value: !GetAtt Repo.RepositoryUri
+  RepositoryUri: { Value: !GetAtt Repo.RepositoryUri }
+  RepositoryName: { Value: !Ref Repo }

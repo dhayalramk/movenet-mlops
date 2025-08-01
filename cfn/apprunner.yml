@@ -1,70 +1,79 @@
-AWSTemplateFormatVersion: "2010-09-09"
-Description: App Runner service pulling from ECR :latest
+AWSTemplateFormatVersion: '2010-09-09'
+Description: MoveNet backend - App Runner (ECR image)
 
 Parameters:
-  ServiceName:
-    Type: String
-    Default: movenet-backend-svc
-  ECRRepoUri:
-    Type: String
-    Description: Full ECR repo URI (e.g., 123456789012.dkr.ecr.ap-south-1.amazonaws.com/movenet-backend)
-  ImageTag:
-    Type: String
-    Default: latest
-  Cpu:
-    Type: String
-    Default: "1 vCPU"
-    AllowedValues: ["1 vCPU","2 vCPU"]
-  Memory:
-    Type: String
-    Default: "2 GB"
-    AllowedValues: ["2 GB","3 GB","4 GB"]
+  Project:  { Type: String }
+  Stage:    { Type: String }
+  ImageUri: { Type: String, Description: 'ECR image URI incl. tag' }
+  Cpu:      { Type: String, Default: '1 vCPU' }
+  Memory:   { Type: String, Default: '2 GB' }
+  Port:     { Type: String, Default: '8000' }
+
+  # storage parameters (can be blank to keep local)
+  StoreBackend:  { Type: String, Default: 'local', AllowedValues: ['local','s3'] }
+  S3BucketName:  { Type: String, Default: '' }
+  S3Prefix:      { Type: String, Default: 'results/' }
+
+Conditions:
+  UseS3: !Equals [ !Ref StoreBackend, 's3' ]
 
 Resources:
-  AppRunnerECRAccessRole:
+  # Instance role so the container can write to S3 (only used if UseS3)
+  AppRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: !Sub "${ServiceName}-ECRAccessRole"
       AssumeRolePolicyDocument:
-        Version: "2012-10-17"
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Principal: { Service: apprunner.amazonaws.com }
             Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSAppRunnerServicePolicyForECRAccess
+      Path: /
+      Policies:
+        - PolicyName: S3Write
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: AllowPut
+                Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:AbortMultipartUpload
+                  - s3:ListBucket
+                  - s3:GetBucketLocation
+                Resource:
+                  - !If [ UseS3, !Sub 'arn:aws:s3:::${S3BucketName}', !Ref 'AWS::NoValue' ]
+                  - !If [ UseS3, !Sub 'arn:aws:s3:::${S3BucketName}/*', !Ref 'AWS::NoValue' ]
 
   Service:
     Type: AWS::AppRunner::Service
     Properties:
-      ServiceName: !Ref ServiceName
+      ServiceName: !Sub '${Project}-${Stage}-api'
       SourceConfiguration:
         AutoDeploymentsEnabled: true
-        AuthenticationConfiguration:
-          AccessRoleArn: !GetAtt AppRunnerECRAccessRole.Arn
         ImageRepository:
-          ImageIdentifier: !Sub "${ECRRepoUri}:${ImageTag}"
           ImageRepositoryType: ECR
+          ImageIdentifier: !Ref ImageUri
           ImageConfiguration:
-            Port: "8000"
+            Port: !Ref Port
             RuntimeEnvironmentVariables:
-              - Name: ALLOW_CLOUDWATCH
-                Value: "true"
-              - Name: ENV
-                Value: "prod"
+              - { Name: ENV,           Value: !Ref Stage }
+              - { Name: STORE_BACKEND, Value: !Ref StoreBackend }
+              - { Name: S3_BUCKET,     Value: !Ref S3BucketName }
+              - { Name: S3_PREFIX,     Value: !Ref S3Prefix }
       InstanceConfiguration:
-        Cpu: !Ref Cpu
+        Cpu:    !Ref Cpu
         Memory: !Ref Memory
+        # Attach role only when using S3; harmless if attached always
+        InstanceRoleArn: !If [ UseS3, !GetAtt AppRole.Arn, !Ref 'AWS::NoValue' ]
       HealthCheckConfiguration:
         Protocol: HTTP
-        Path: "/healthz"
+        Path: /healthz
         Interval: 10
         Timeout: 5
         HealthyThreshold: 1
-        UnhealthyThreshold: 3
+        UnhealthyThreshold: 5
 
 Outputs:
-  ServiceUrl:
-    Value: !GetAtt Service.ServiceUrl
-  ServiceStatus:
-    Value: !GetAtt Service.Status
+  ServiceUrl: { Value: !GetAtt Service.ServiceUrl }
+  ServiceArn: { Value: !GetAtt Service.ServiceArn }

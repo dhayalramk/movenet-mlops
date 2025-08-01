@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.log
+.env
+.git
+.data/
+data/
+cache/
+.DS_Store
+tests/
+.notebooks/

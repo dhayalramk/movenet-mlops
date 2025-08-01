@@ -26,12 +26,24 @@ chmod +x scripts/setup_py310.sh
 Frontend:
 ```
 cd frontend
+pyenv activate movenet-310
 python3 -m http.server 8080
 ```
 Backend:
 ```
 cd backend
+pyenv activate movenet-310
 uvicorn app:app --host 0.0.0.0 --port 8000
+```
+
+Docker build
+```
+cd backend
+docker build -t movenet-backend .
+docker run --rm -p 8000:8000 movenet-backend
+# In another terminal - To Test
+curl -sSf http://127.0.0.1:8000/healthz
+
 ```
 
 ## CI/CD

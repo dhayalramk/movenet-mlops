@@ -45,8 +45,9 @@ async def predict(
 ):
     start = time.time()
     image_bytes = await file.read()
-    _ = run_inference(image_bytes, variant=variant)
-    result = {}
+    # result = {}
+    result = run_inference(image_bytes, variant=variant)
+    
 
     try:
         result["host"] = {
