@@ -32,23 +32,20 @@ let allDetections = [];
 let autoTimer = null;
 let webcamStream = null;
 
-function stopWebcam() {
-  try {
-    if (webcamStream) {
-      webcamStream.getTracks().forEach(t => t.stop());
-      webcamStream = null;
-    }
-  } catch (_) {}
-  running = false;
-  video.srcObject = null;
-  // Clear canvas & stats
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  statsEl.textContent = '';
-  // Button label
-  useWebcamBtn.textContent = 'Use Webcam';
-  // Stop auto-store if enabled
-  if (autoTimer) { clearInterval(autoTimer); autoTimer = null; autoStoreChk.checked = false; }
+function setWebcamBtn(mode) {
+  // mode: 'start' or 'stop'
+  if (mode === 'stop') {
+    useWebcamBtn.textContent = 'Stop Webcam';
+    useWebcamBtn.classList.remove('btn-start');
+    useWebcamBtn.classList.add('btn-stop');
+  } else {
+    useWebcamBtn.textContent = 'Start Webcam';
+    useWebcamBtn.classList.remove('btn-stop');
+    useWebcamBtn.classList.add('btn-start');
+  }
 }
+
+
 
 /* ---------- Errors / Toasts ---------- */
 function showError(e) {
@@ -58,6 +55,8 @@ function showError(e) {
 }
 window.addEventListener('error', ev => showError(ev.error || ev.message));
 window.addEventListener('unhandledrejection', ev => showError(ev.reason));
+window.addEventListener('beforeunload', stopWebcam);
+
 
 function showToast(msg) {
   toastEl.textContent = msg;
@@ -205,24 +204,38 @@ async function loop() {
 }
 
 /* ---------- Inputs ---------- */
+function stopWebcam() {
+  try {
+    if (webcamStream) {
+      webcamStream.getTracks().forEach(t => t.stop());
+      webcamStream = null;
+    }
+  } catch (_) {}
+  running = false;
+  video.srcObject = null;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  statsEl.textContent = '';
+  if (autoTimer) { clearInterval(autoTimer); autoTimer = null; autoStoreChk.checked = false; }
+  setWebcamBtn('start');
+}
+
 async function startWebcam() {
   try {
-    // Stop any playing file video first
-    if (!video.srcObject && !video.paused && !video.ended) { video.pause(); }
-
+    if (!video.srcObject && !video.paused && !video.ended) video.pause();
     const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-    webcamStream = stream;                         // <— save it
+    webcamStream = stream;
     video.srcObject = stream;
     await video.play();
     await new Promise(res => { if (video.readyState >= 2) res(); else video.onloadedmetadata = () => res(); });
     resizeCanvas(video.videoWidth, video.videoHeight);
     await restartDetector();
     running = true;
-    useWebcamBtn.textContent = 'Stop Webcam';      // <— label
+    setWebcamBtn('stop');
     loop();
   } catch (e) {
     showToast('Webcam failed or blocked. Try image/video upload.');
     showError(e);
+    setWebcamBtn('start');
   }
 }
 
