@@ -1,49 +1,52 @@
-name: Backend CI/CD (App Runner via ECR)
+name: Backend CI/CD – Auto Stage (stg/prod)
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main     # ← deploy to prod
+      - stage    # ← deploy to stg
     paths:
       - "backend/**"
       - ".github/workflows/backend-deploy.yml"
+      - "scripts/deploy-backend.sh"
+      - "cfn/**"
+
+env:
+  AWS_REGION: ap-south-1
+  PROJECT: movenet
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
       id-token: write
+      contents: read
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set STAGE based on branch
+        id: set_stage
+        run: |
+          if [[ "${{ github.ref_name }}" == "main" ]]; then
+            echo "STAGE=prod" >> "$GITHUB_ENV"
+          elif [[ "${{ github.ref_name }}" == "stage" ]]; then
+            echo "STAGE=stg" >> "$GITHUB_ENV"
+          else
+            echo "❌ Unsupported branch for deployment"
+            exit 1
+          fi
+          echo "🌍 Stage set to $STAGE"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Login to ECR
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Build, tag, and push image
-        env:
-          ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
-          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
-          IMAGE_TAG: latest
+      - name: Run backend deploy script
         run: |
-          docker build -t $ECR_REPOSITORY:ci ./backend
-          docker tag $ECR_REPOSITORY:ci $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-
-      - name: Smoke Test container (local)
-        run: |
-          docker run -d -p 8000:8000 ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:latest || true
-          sleep 8
-          curl -sSf http://localhost:8000/healthz || true
-
-      - name: Lint (flake8)
-        run: |
-          pipx install flake8
-          flake8 backend || true
+          chmod +x ./scripts/deploy-backend.sh
+          ./scripts/deploy-backend.sh $STAGE
