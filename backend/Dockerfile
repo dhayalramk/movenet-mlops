@@ -25,16 +25,11 @@ RUN python -m pip install --upgrade pip setuptools wheel \
 COPY . .
 RUN mkdir -p ${TFHUB_CACHE_DIR}
 
-EXPOSE 8000
+EXPOSE 8080
 
-# Healthcheck hits /healthz
+# Healthcheck hits /healthz on correct port
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD python - <<'PY' || exit 1
-import urllib.request
-u="http://127.0.0.1:8000/healthz"
-with urllib.request.urlopen(u, timeout=3) as r:
-    exit(0 if r.status==200 else 1)
-PY
+  CMD python -c "import urllib.request; u='http://127.0.0.1:8080/healthz'; urllib.request.urlopen(u, timeout=3).read()" || exit 1
 
 # Keep single worker (one TF model per process)
-CMD ["uvicorn","app:app","--host","0.0.0.0","--port","8000","--workers","1"]
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "1"]

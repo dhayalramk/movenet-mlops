@@ -1,0 +1,107 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: MoveNet backend on App Runner (pull from ECR, write to S3, optional metrics)
+
+Parameters:
+  Project:  { Type: String }
+  Stage:    { Type: String }
+  ImageUri: { Type: String, Description: 'ECR image URI incl. tag, e.g. 123456789012.dkr.ecr.ap-south-1.amazonaws.com/movenet-stg:stg' }
+
+  Cpu:      { Type: String, Default: '1 vCPU' }
+  Memory:   { Type: String, Default: '2 GB' }
+  Port:     { Type: String, Default: '8000' }
+
+  StoreBackend:    { Type: String, Default: 'local', AllowedValues: ['local','s3'] }
+  S3BucketName:    { Type: String, Default: '' }
+  S3Prefix:        { Type: String, Default: 'results/' }
+  CorsOrigins:     { Type: String, Default: '*' }
+  AllowCloudWatch: { Type: String, Default: 'false', AllowedValues: ['true','false'] }
+
+Conditions:
+  UseS3:           !Equals [ !Ref StoreBackend, 's3' ]
+  AllowCW:         !Equals [ !Ref AllowCloudWatch, 'true' ]
+
+Resources:
+  ECRAccessRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${Project}-${Stage}-ECRAccessRole'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: build.apprunner.amazonaws.com
+            Action: sts:AssumeRole
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSAppRunnerServicePolicyForECRAccess
+
+  AppInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: tasks.apprunner.amazonaws.com }
+            Action: sts:AssumeRole
+      Path: /
+      Policies:
+        - PolicyName: S3Write
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: AllowS3
+                Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:AbortMultipartUpload
+                  - s3:ListBucket
+                  - s3:GetBucketLocation
+                Resource:
+                  - !If [ UseS3, !Sub 'arn:aws:s3:::${S3BucketName}', !Ref 'AWS::NoValue' ]
+                  - !If [ UseS3, !Sub 'arn:aws:s3:::${S3BucketName}/*', !Ref 'AWS::NoValue' ]
+        - PolicyName: CloudWatchMetrics
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: AllowPutMetric
+                Effect: !If [ AllowCW, Allow, Deny ]
+                Action: cloudwatch:PutMetricData
+                Resource: "*"
+
+  Service:
+    Type: AWS::AppRunner::Service
+    Properties:
+      ServiceName: !Sub '${Project}-${Stage}-api'
+      SourceConfiguration:
+        AutoDeploymentsEnabled: true
+        AuthenticationConfiguration:
+          AccessRoleArn: !GetAtt ECRAccessRole.Arn
+        ImageRepository:
+          ImageRepositoryType: ECR
+          ImageIdentifier: !Ref ImageUri
+          ImageConfiguration:
+            Port: !Ref Port
+            RuntimeEnvironmentVariables:
+              - { Name: ENV,               Value: !Ref Stage }
+              - { Name: STORE_BACKEND,     Value: !Ref StoreBackend }
+              - { Name: S3_BUCKET,         Value: !Ref S3BucketName }
+              - { Name: S3_PREFIX,         Value: !Ref S3Prefix }
+              - { Name: CORS_ORIGINS,      Value: !Ref CorsOrigins }
+              - { Name: ALLOW_CLOUDWATCH,  Value: !Ref AllowCloudWatch }
+      InstanceConfiguration:
+        Cpu:            !Ref Cpu
+        Memory:         !Ref Memory
+        InstanceRoleArn: !GetAtt AppInstanceRole.Arn
+      HealthCheckConfiguration:
+        Protocol: HTTP
+        Path: /healthz
+        Interval: 10
+        Timeout: 5
+        HealthyThreshold: 1
+        UnhealthyThreshold: 5
+
+Outputs:
+  ServiceUrl: { Value: !GetAtt Service.ServiceUrl }
+  ServiceArn: { Value: !GetAtt Service.ServiceArn }

@@ -1,0 +1,79 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: MoveNet frontend - S3 + CloudFront
+
+Parameters:
+  Project: { Type: String }
+  Stage:   { Type: String }
+
+Resources:
+  SiteBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${Project}-${Stage}-site-${AWS::AccountId}-${AWS::Region}'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: false
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls: { Rules: [ { ObjectOwnership: BucketOwnerPreferred } ] }
+      VersioningConfiguration: { Status: Enabled }
+
+  LogsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${Project}-${Stage}-logs-${AWS::AccountId}-${AWS::Region}'
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls: { Rules: [ { ObjectOwnership: BucketOwnerPreferred } ] }
+
+  OAI:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig: { Comment: !Sub '${Project}-${Stage}-oai' }
+
+  BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref SiteBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: AllowCloudFrontRead
+            Effect: Allow
+            Action: s3:GetObject
+            Resource: !Sub '${SiteBucket.Arn}/*'
+            Principal:
+              CanonicalUser: !GetAtt OAI.S3CanonicalUserId
+
+  CDN:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Comment: !Sub '${Project}-${Stage} static site'
+        DefaultRootObject: index.html
+        Logging:
+          Bucket: !Sub '${LogsBucket}.s3.amazonaws.com'
+          IncludeCookies: false
+          Prefix: cloudfront/
+        Origins:
+          - Id: s3origin
+            DomainName: !GetAtt SiteBucket.RegionalDomainName
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub 'origin-access-identity/cloudfront/${OAI}'
+        DefaultCacheBehavior:
+          TargetOriginId: s3origin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [ GET, HEAD, OPTIONS ]
+          CachedMethods:  [ GET, HEAD, OPTIONS ]
+          Compress: true
+          ForwardedValues: { QueryString: false, Cookies: { Forward: none } }
+        PriceClass: PriceClass_100
+
+Outputs:
+  BucketName:         { Value: !Ref SiteBucket }
+  DistributionId:     { Value: !Ref CDN }
+  DistributionDomain: { Value: !GetAtt CDN.DomainName }
