@@ -8,7 +8,7 @@ Parameters:
 
   Cpu:      { Type: String, Default: '1 vCPU' }
   Memory:   { Type: String, Default: '2 GB' }
-  Port:     { Type: String, Default: '8000' }
+  Port:     { Type: String, Default: '8080' }
 
   StoreBackend:    { Type: String, Default: 'local', AllowedValues: ['local','s3'] }
   S3BucketName:    { Type: String, Default: '' }
