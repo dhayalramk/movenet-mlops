@@ -66,9 +66,12 @@ Resources:
             Version: '2012-10-17'
             Statement:
               - Sid: AllowPutMetric
-                Effect: !If [ AllowCW, Allow, Deny ]
+                Effect: Allow
                 Action: cloudwatch:PutMetricData
                 Resource: "*"
+                Condition:
+                  StringEquals:
+                    aws:RequestedRegion: !Ref "AWS::Region"
 
   Service:
     Type: AWS::AppRunner::Service
